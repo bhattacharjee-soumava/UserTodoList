@@ -1,5 +1,5 @@
 //jshint esversion:6
-
+require('dotenv').config();
 const express = require("express");
 const ejs = require("ejs");
 const bodyParser = require("body-parser");
@@ -54,6 +54,9 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+//Connect Using Shell:
+//mongosh "mongodb+srv://cluster0.kdb349w.mongodb.net/userTodoListDB" --apiVersion 1 --username soumava-admin
+//mongodb+srv://soumava-admin:<password>@cluster0.kdb349w.mongodb.net/?retryWrites=true&w=majority
 mongoose.connect("mongodb+srv://soumava-admin:Test123@cluster0.kdb349w.mongodb.net/userTodoListDB");
 const {
   Schema,
@@ -62,18 +65,96 @@ const {
 // //
 // //##TO do####
 // //
-const todoSchema = new Schema({
-  user: String,
+const userSchema = new Schema({
+  email: String,
+  password: String,
+  googleId: String,
+  facebookId: String,
+  secret: String
+}, {
+  collection: "users"
+});
+
+const todoUserSchema = new Schema({
+  user: {
+    email: String,
+    password: String,
+    googleId: String,
+    facebookId: String,
+    secret: String,
+  },
   todoEntry: {
     type: String,
     required: [true, '***Please make a valid entry***'],
   }
 }, {
-  collection: 'todoLists'
+  collection: 'todoUsers'
 });
+
+
+userSchema.plugin(passportLocalMongoose);
+userSchema.plugin(findOrCreate);
+
+
+const TodoUser = model("TodoUser", todoUserSchema);
+const User = model("User", userSchema);
 // let day = date.getDay();
 const currentYear = new Date().getFullYear()
 
+// passport.use(User.createStrategy());
+
+// passport.serializeUser(User.serializeUser());
+// passport.deserializeUser(User.deserializeUser());
+// passport.serializeUser(function(user, done) {
+//   done(null, user.id);
+// });
+//
+// passport.deserializeUser(function(id, done) {
+//   User.findById(id, function(err, user) {
+//     done(err, user);
+//   });
+// });
+passport.serializeUser(function(user, done) {
+  done(null, user);
+});
+
+passport.deserializeUser(function(user, done) {
+  done(null, user);
+});
+
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/google/home"
+      // callbackURL: '/oauth2/redirect/google',
+
+  },
+  function(accessToken, refreshToken, profile, cb) {
+
+    console.log(profile);
+    console.log(User);
+    User.findOrCreate({
+      googleId: profile.id
+    }, function(err, user) {
+      console.log('A new user from "%s" was inserted', user.googleId);
+      return cb(err, user);
+    });
+  }
+));
+
+
+
+passport.use(new FacebookStrategy({
+    clientID: process.env.FACEBOOK_APP_ID,
+    clientSecret: process.env.FACEBOOK_APP_SECRET,
+    callbackURL: "http://localhost:3000/auth/facebook/home"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+    User.findOrCreate({ facebookId: profile.id }, function (err, user) {
+      return cb(err, user);
+    });
+  }
+));
 // app.get("/:customListName", function(req, res) {
 //
 //   var customListName = _.capitalize(req.params.customListName);
@@ -98,9 +179,55 @@ const currentYear = new Date().getFullYear()
 //   });
 // });
 
+
+
 app.get("/", function(req, res) {
   res.render("signin", {currentYear: currentYear});
 });
+
+app.get("/home", function(req, res) {
+  console.log(req.isAuthenticated());
+  if (req.isAuthenticated()) {
+    User.findById(req.user.id, function(err, userFound){
+      if (err){
+        console.log(err);
+      } else {
+        res.render("home", {currentYear: currentYear});
+      }
+    });
+  } else {
+    //res.redirect("login");
+    //-->ChangeUser.find({secret: {$ne: null}}, function(err, userswithSecretsFound){
+      res.render("signin", {currentYear: currentYear});
+    }
+  });
+
+
+//Authenticate Requests//
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+
+
+app.get('/auth/google/home',
+  passport.authenticate('google', {
+    failureRedirect: '/'
+  }),
+  function(req, res) {
+    // Successful authentication, redirect to secrets.
+    res.redirect('/home');
+  });
+
+  app.get('/auth/facebook',
+    passport.authenticate('facebook'));
+
+  app.get('/auth/facebook/home',
+    passport.authenticate('facebook', { failureRedirect: '/' }),
+    function(req, res) {
+      // Successful authentication, redirect home.
+      res.redirect('/home');
+    });
+
 
 app.post("/",function(req, res){res.send("<h1>Hello</h1>");});
 
