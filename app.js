@@ -286,34 +286,45 @@ app.post("/signup", function(req, res) {
 
 app.post("/signin", function(req, res) {
 
-  User.findOne({username: req.body.email}, function(err, userFound){
+  User.findOne({
+    username: req.body.email
+  }, function(err, userFound) {
 
-        console.log("In signin post method....");
-        console.log(req.body.username);
-        console.log(req.body.password);
-        console.log(userFound);
-        if(userFound != null){
-          if (err){
-            console.log(err);
-          } else {
-            bcrypt.compare(req.body.password, userFound.password, function(err, result) {
-              if (result == true){
-                res.render("home", {
-                  currentYear: currentYear
-                });
-              } else {
-                res.render("signin", {
-                  currentYear: currentYear
-                });
-              }
+    console.log("In signin post method....");
+    console.log(req.body.username);
+    console.log(req.body.password);
+    console.log(userFound);
+    if (userFound != null) {
+      if (err) {
+        console.log(err);
+      } else {
+        bcrypt.compare(req.body.password, userFound.password, function(err, result) {
+          if (result == true) {
+            res.render("home", {
+              currentYear: currentYear
             });
-            // res.render("secrets", {usersWithSecret: [userFound]});
+          } else {
+            res.render("signin", {
+              currentYear: currentYear
+            });
           }
-        } else {
-          res.redirect("/");
-        }
+        });
+        // res.render("secrets", {usersWithSecret: [userFound]});
+      }
+    } else {
+      res.redirect("/");
+    }
 
-      });
+  });
+
+  app.post('/logout', function(req, res, next) {
+    req.logout(function(err) {
+      if (err) {
+        return next(err);
+      }
+      res.redirect('/');
+    });
+  });
   // console.log(req.isAuthenticated());
   // if (req.isAuthenticated()) {
   //   User.findById(req.user.id, function(err, userFound) {

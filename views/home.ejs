@@ -1,5 +1,44 @@
 <%- include("partials/header") -%>
 
-<h1>This is the home page to be constructed.</h1>
+<!-- <nav class="navbar navbar-expand-sm bg-body-light" style="background-color: #A683E3;"> -->
+<nav class="navbar navbar-expand-sm navbar-light">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">ToDoList</a>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">About</a>
+        </li>
+      </ul>
+    </div>
+
+
+    <form class="" action="/logout" method="post">
+      <button class="btn" type="submit">Logout</button>
+    </form>
+  </div>
+</nav>
+
+<div class="">
+  <h1>This is the home page to be constructed.</h1>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-4">
+        <h1>Left part for creating new todolist</h1>
+      </div>
+      <div class="col-8">
+        <h1>Right part to show all to do lists</h1>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 
 <%- include("partials/footer") -%>
