@@ -14,29 +14,10 @@ const passportLocalMongoose = require("passport-local-mongoose");
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const findOrCreate = require('mongoose-findorcreate');
 const FacebookStrategy = require('passport-facebook');
+const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
-//const saltRounds = process.env.SALT_ROUNDS;
 const saltRounds = 10;
 
-// const TodoDaily = model('TodoDaily', todoSchemaDaily);
-// //
-// //Schema within Schema
-// //
-// const itemSchema = {
-//   todoEntry: String
-// };
-//
-// const Item = model('Item', itemSchema);
-//
-// const listSchema = {
-//   name: String,
-//   items: [itemSchema]
-// };
-//
-// const List = model('List', listSchema);
-//
-//
-//
 app.set("view engine", "ejs");
 
 app.use(bodyParser.urlencoded({
@@ -58,7 +39,7 @@ app.use(passport.session());
 
 //Connect Using Shell:
 //mongosh "mongodb+srv://cluster0.kdb349w.mongodb.net/userTodoListDB" --apiVersion 1 --username soumava-admin
-//mongodb+srv://soumava-admin:<password>@cluster0.kdb349w.mongodb.net/?retryWrites=true&w=majority
+
 mongoose.connect("mongodb+srv://soumava-admin:Test123@cluster0.kdb349w.mongodb.net/userTodoListDB");
 const {
   Schema,
@@ -78,52 +59,41 @@ const userSchema = new Schema({
   collection: "users"
 });
 
+userSchema.plugin(passportLocalMongoose);
+userSchema.plugin(findOrCreate);
+// I am use bctypt, but you need your comparer function
+userSchema.methods.verifyPassword = function(password, callback) {
+  callback(err, bcrypt.compareSync(password, this.password));
+};
+const User = model("User", userSchema);
+
+const itemSchema = new Schema({
+  todoEntry: String
+})
+
+
 const todoUserSchema = new Schema({
-  user: {
-    // email: String,
-    username: String,
-    password: String,
-    googleId: String,
-    facebookId: String,
-    // secret: String,
-  },
-  todoEntry: {
-    type: String,
-    required: [true, '***Please make a valid entry***'],
-  }
+  userID: String,
+  listName: String,
+  items: [itemSchema]
 }, {
   collection: 'todoUsers'
 });
 
-
-userSchema.plugin(passportLocalMongoose);
-userSchema.plugin(findOrCreate);
-
-
 const TodoUser = model("TodoUser", todoUserSchema);
-const User = model("User", userSchema);
+
+
 // let day = date.getDay();
 const currentYear = new Date().getFullYear()
 
-// passport.use(User.createStrategy());
-
-// passport.serializeUser(User.serializeUser());
-// passport.deserializeUser(User.deserializeUser());
-// passport.serializeUser(function(user, done) {
-//   done(null, user.id);
-// });
-//
-// passport.deserializeUser(function(id, done) {
-//   User.findById(id, function(err, user) {
-//     done(err, user);
-//   });
-// });
 passport.serializeUser(function(user, done) {
   done(null, user);
 });
 
-passport.deserializeUser(function(user, done) {
-  done(null, user);
+passport.deserializeUser(function(id, done) {
+  User.findById(id, function(err, user) {
+    done(err, user);
+  });
 });
 
 passport.use(new GoogleStrategy({
@@ -146,8 +116,6 @@ passport.use(new GoogleStrategy({
   }
 ));
 
-
-
 passport.use(new FacebookStrategy({
     clientID: process.env.FACEBOOK_APP_ID,
     clientSecret: process.env.FACEBOOK_APP_SECRET,
@@ -161,29 +129,36 @@ passport.use(new FacebookStrategy({
     });
   }
 ));
-// app.get("/:customListName", function(req, res) {
-//
-//   var customListName = _.capitalize(req.params.customListName);
-//   console.log(customListName);
-//   List.findOne({
-//     name: customListName
-//   }, function(err, foundList) {
-//     console.log(foundList);
-//     if (!foundList) {
-//       res.render("list", {
-//         listTitle: customListName,
-//         newItems: []
-//       });
-//     } else {
-//       console.log(foundList.items);
-//
-//       res.render("list", {
-//         listTitle: customListName,
-//         newItems: foundList.items
-//       });
-//     }
-//   });
-// });
+
+
+passport.use('local-signup', new LocalStrategy({},
+
+  function(username, password, err) {
+
+
+    console.log(username);
+    console.log(password);
+
+    User.findOne({ username: username }, function (err, user) {
+
+      if (err){
+        throw err;
+      }
+
+      if (user) {
+        console.log('That email is already taken.');
+        // return done(null, false, req.flash('signupMessage', 'That email is already taken.'));
+      } else {
+
+        console.log("Save new user here");
+
+      }
+
+
+    });
+  }
+));
+
 
 //App Get methods
 
@@ -194,8 +169,10 @@ app.get("/", function(req, res) {
 });
 
 app.get("/home", function(req, res) {
+  console.log("In home route get method");
   console.log(req.isAuthenticated());
   if (req.isAuthenticated()) {
+    console.log("req.user.id: " + req.user.id);
     User.findById(req.user.id, function(err, userFound) {
       if (err) {
         console.log(err);
@@ -247,9 +224,83 @@ app.get('/auth/facebook/home',
 
 //App Post Methods ///
 
-app.post("/", function(req, res) {
-  res.send("<h1>Hello</h1>");
+// app.post("/", function(req, res) {
+//   res.send("<h1>Hello</h1>");
+// });
+
+app.get("/register", function(req, res) {
+  res.render("register", {
+    currentYear: currentYear
+  });
 });
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  Sign Up method w/o passport start
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// app.post("/register", function(req, res) {
+//
+//   //const username = req.body.username;
+//   console.log(req.body.username);
+//   console.log(req.body.password);
+//
+//   bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
+//     // Store hash in your password DB.
+//     if (err) {
+//       console.log(err);
+//     } else {
+//       const user = new User({
+//         username: req.body.username,
+//         password: hash
+//       });
+//       user.save();
+//     }
+//   });
+//   res.render("home", {
+//     currentYear: currentYear
+//   });
+//
+//
+// });
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  Sign Up method w/o passport end
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  Sign Up method with passport start
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// app.post("/register", function(req, res) {
+//
+//   User.register({
+//     username: req.body.username,
+//     active: false
+//   }, req.body.password, function(err, user) {
+//     if (err) {
+//       console.log(err);
+//       res.redirect("/register");
+//     } else {
+//       passport.authenticate("local")(req, res, function() {
+//         res.redirect("/home");
+//         // const authenticate = User.authenticate();
+//         // authenticate(req.body.username, req.body.password, function(err, result) {
+//         //   if (err) {
+//         //     console.log(err);
+//         //   }else{
+//         //     res.redirect("/secrets");
+//         //   }
+//         //
+//         //   // Value 'result' is set to false. The user could not be authenticated since the user is not active
+//         // });
+//       });
+//     }
+//
+//
+//
+//   });
+//
+//
+//
 
 app.post("/register", function(req, res) {
   res.render("register", {
@@ -257,66 +308,67 @@ app.post("/register", function(req, res) {
   });
 });
 
-
-app.post("/signup", function(req, res) {
-
-  //const username = req.body.username;
-  console.log(req.body.username);
-  console.log(req.body.password);
-
-  bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
-    // Store hash in your password DB.
-    if (err) {
-      console.log(err);
-    } else {
-      const user = new User({
-        username: req.body.username,
-        password: hash
-      });
-      user.save();
-    }
-  });
-  res.render("home", {
-    currentYear: currentYear
-  });
+// process the signup form
+app.post('/signup', passport.authenticate('local-signup', {
+    successRedirect : '/home', // redirect to the secure profile section
+    failureRedirect : '/register'
+}));
 
 
-});
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  Sign Up method with passport end
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  Sign In method without passport start
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // app.post("/signin", function(req, res) {
+  //
+  // User.findOne({
+  //   username: req.body.email
+  // }, function(err, userFound) {
+  //
+  //   console.log("In signin post method....");
+  //   console.log(req.body.email);
+  //   console.log(req.body.password);
+  //   console.log("userFound: " + userFound);
+  //   if (userFound != null) {
+  //     if (err) {
+  //       console.log(err);
+  //     } else {
+  //       bcrypt.compare(req.body.password, userFound.password, function(err, result) {
+  //         console.log("result: " + result);
+  //         if (result == true) {
+  //           res.redirect("/home");
+  //         } else {
+  //           res.redirect("/signin");
+  //         }
+  //       });
+  //       // res.render("secrets", {usersWithSecret: [userFound]});
+  //     }
+  //   } else {
+  //     res.redirect("/");
+  // }
+  //
+  // });
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //  Sign In method without passport end
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-app.post("/signin", function(req, res) {
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //  Sign In method with passport start
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  User.findOne({
-    username: req.body.email
-  }, function(err, userFound) {
-
-    console.log("In signin post method....");
-    console.log(req.body.username);
-    console.log(req.body.password);
-    console.log(userFound);
-    if (userFound != null) {
-      if (err) {
-        console.log(err);
-      } else {
-        bcrypt.compare(req.body.password, userFound.password, function(err, result) {
-          if (result == true) {
-            res.render("home", {
-              currentYear: currentYear
-            });
-          } else {
-            res.render("signin", {
-              currentYear: currentYear
-            });
-          }
-        });
-        // res.render("secrets", {usersWithSecret: [userFound]});
-      }
-    } else {
-      res.redirect("/");
-    }
-
+  app.post('/signin',
+  passport.authenticate('local', { failureRedirect: '/' }),
+  function(req, res) {
+    res.redirect('/home');
   });
 
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //  Sign In method with passport end
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   app.post('/logout', function(req, res, next) {
     req.logout(function(err) {
       if (err) {
@@ -325,25 +377,26 @@ app.post("/signin", function(req, res) {
       res.redirect('/');
     });
   });
-  // console.log(req.isAuthenticated());
-  // if (req.isAuthenticated()) {
-  //   User.findById(req.user.id, function(err, userFound) {
-  //     if (err) {
-  //       console.log(err);
-  //     } else {
-  //       res.render("home", {
-  //         currentYear: currentYear
-  //       });
-  //     }
-  //   });
-  // } else {
-  //   //res.redirect("login");
-  //   //-->ChangeUser.find({secret: {$ne: null}}, function(err, userswithSecretsFound){
-  //   res.render("signin", {
-  //     currentYear: currentYear
-  //   });
-  // }
-});
+
+// console.log(req.isAuthenticated());
+// if (req.isAuthenticated()) {
+//   User.findById(req.user.id, function(err, userFound) {
+//     if (err) {
+//       console.log(err);
+//     } else {
+//       res.render("home", {
+//         currentYear: currentYear
+//       });
+//     }
+//   });
+// } else {
+//   //res.redirect("login");
+//   //-->ChangeUser.find({secret: {$ne: null}}, function(err, userswithSecretsFound){
+//   res.render("signin", {
+//     currentYear: currentYear
+//   });
+// }
+
 
 
 
