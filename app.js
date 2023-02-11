@@ -63,6 +63,8 @@ userSchema.plugin(findOrCreate);
 
 const User = model("User", userSchema);
 
+
+
 const itemSchema = new Schema({
   item: String
 });
@@ -81,6 +83,9 @@ const TodoUser = model("TodoUser", todoUserSchema);
 const currentYear = new Date().getFullYear()
 
 
+////////////////////////////////////////////////////////////
+//     Passport Strategies
+////////////////////////////////////////////////////////////
 
 passport.serializeUser(function(user, done) {
   done(null, user);
@@ -128,9 +133,9 @@ passport.use(new FacebookStrategy({
   }
 ));
 
-
+////////////////////////////////////////////////////////////
 //App Get methods
-
+////////////////////////////////////////////////////////////
 app.get("/", function(req, res) {
   res.render("signin", {
     currentYear: currentYear
@@ -146,9 +151,11 @@ app.get("/home", function(req, res) {
       if (err) {
         console.log(err);
       } else {
-        res.render("home", {
-          currentYear: currentYear
-        });
+        res.render("list", {
+        listTitle: "Work",
+        newItems: [],
+        currentYear: currentYear
+      });
       }
     });
   } else {
@@ -187,14 +194,16 @@ app.get('/auth/facebook/home',
     res.redirect('/home');
   });
 
+  app.get("/register", function(req, res) {
+    res.render("register", {
+      currentYear: currentYear
+    });
+  });
+
 //App Post Methods ///
 
 
-app.get("/register", function(req, res) {
-  res.render("register", {
-    currentYear: currentYear
-  });
-});
+
 
 
 app.post("/signup", function(req, res) {
@@ -203,51 +212,47 @@ app.post("/signup", function(req, res) {
   console.log(req.body.username);
   console.log(req.body.password);
 
-  User.register({username: req.body.username}, req.body.password , function(err,user){
-  if(err){
-    console.log(err);
-    res.redirect("/register")
-  }
-  else{
-    //A new user was saved
-    console.log("Local user: " + user + "is saved.");
+  User.register({
+    username: req.body.username
+  }, req.body.password, function(err, user) {
+    if (err) {
+      console.log(err);
+      res.redirect("/register")
+    } else {
+      //A new user was saved
+      console.log("Local user: " + user + "is saved.");
 
-    passport.authenticate("local")(req,res,function(){
-      res.redirect("/home")
-    })
-  }
-})
+      passport.authenticate("local")(req, res, function() {
+        res.redirect("/home")
+      })
+    }
+  })
 
 });
 
-app.post('/register',
-function(req, res) {
-  console.log("In register post call");
-  res.render("register", {
-    currentYear: currentYear
-  });
-});
-
-  app.post('/signin',
+app.post("/registerpage",
   function(req, res) {
-    console.log("In signin post call");
-    // res.render("home", {
-    //   currentYear: currentYear
-    // });
-  });
-
-
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  //  Sign In method with passport end
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  app.post('/logout', function(req, res, next) {
-    req.logout(function(err) {
-      if (err) {
-        return next(err);
-      }
-      res.redirect('/');
+    console.log("In register post call");
+    res.render("register", {
+      currentYear: currentYear
     });
   });
+
+app.post('/signin',
+  passport.authenticate('local', { failureRedirect: '/' }),
+  function(req, res) {
+    res.redirect('/home');
+  });
+
+
+app.post('/logout', function(req, res, next) {
+  req.logout(function(err) {
+    if (err) {
+      return next(err);
+    }
+    res.redirect('/');
+  });
+});
 
 
 let port = process.env.PORT;
