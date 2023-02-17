@@ -16,7 +16,7 @@ const findOrCreate = require('mongoose-findorcreate');
 const FacebookStrategy = require('passport-facebook');
 const LocalStrategy = require('passport-local').Strategy;
 
-
+// <button type="submit" name="delButton" onChange="submit()" value= <%= list._id %> ></button>
 
 
 app.set("view engine", "ejs");
@@ -320,7 +320,40 @@ app.post('/signin',
     }
   });
 
+app.post("/userListCategory/delete", function(req, res) {
+  console.log("In - /userListCategory/delete");
+  // console.log(req.body);
+  if (req.isAuthenticated()) {
+    console.log("req.user.id: " + req.user.id);
+    console.log(req.body);
 
+    const userId = req.user.id;
+    const delId = req.body.myCheckbox;
+
+    TodoUser.findOneAndUpdate({
+      userID: userId
+    }, {
+      $pull: {
+        lists: {
+          _id: delId
+        }
+      }
+    }, function(err, foundList) {
+
+      if (!err) {
+        res.redirect("/home");
+      }else{
+        console.log(err);
+      }
+      
+    });
+
+  }else{
+    res.render("signin", {
+      currentYear: currentYear
+    });
+  }
+});
 
 app.post('/logout', function(req, res, next) {
   req.logout(function(err) {
