@@ -17,7 +17,7 @@ const FacebookStrategy = require('passport-facebook');
 const LocalStrategy = require('passport-local').Strategy;
 
 // <button type="submit" name="delButton" onChange="submit()" value= <%= list._id %> ></button>
-
+    // <p id="listCategory"  class="hover" onClick="submit()"> <%= list.listCategory %></p>
 
 app.set("view engine", "ejs");
 
@@ -163,12 +163,12 @@ app.get("/home", function(req, res) {
       } else {
         console.log("userListsFound.lists: " + userListsFound.lists);
         if (userListsFound.lists == null){
-          res.render("list", {
+          res.render("home", {
           lists: [],
           currentYear: currentYear
         });
         }else{
-          res.render("list", {
+          res.render("home", {
           lists: userListsFound.lists,
           currentYear: currentYear
         });
@@ -184,6 +184,44 @@ app.get("/home", function(req, res) {
   }
 });
 
+
+app.get("/user/:userListCategory", function(req, res) {
+
+  console.log("-------req.params.userListCategory: " + req.params.userListCategory);
+
+  const testListTitle = req.params.userListCategory;
+
+  
+
+  res.render("list", {
+    currentYear: currentYear,
+    listTitle: testListTitle,
+    newItems: []
+  });
+
+  // var customListName = _.capitalize(req.params.customListName);
+  // console.log(customListName);
+  // List.findOne({
+  //   name: customListName
+  // }, function(err, foundList) {
+  //   console.log(foundList);
+  //   if (!foundList) {
+  //     res.render("list", {
+  //       listTitle: customListName,
+  //       newItems: []
+  //     });
+  //   } else {
+  //     console.log(foundList.items);
+  //
+  //     res.render("list", {
+  //       listTitle: customListName,
+  //       newItems: foundList.items
+  //     });
+  //   }
+  // });
+
+
+});
 //Authenticate Requests//
 app.get('/auth/google',
   passport.authenticate('google', {
@@ -320,33 +358,59 @@ app.post('/signin',
     }
   });
 
-app.post("/userListCategory/delete", function(req, res) {
-  console.log("In - /userListCategory/delete");
-  // console.log(req.body);
+app.post("/userListCategory/exploreDelete", function(req, res) {
+  console.log("In - /userListCategory/exploreDelete");
+  console.log(req.body);
   if (req.isAuthenticated()) {
     console.log("req.user.id: " + req.user.id);
     console.log(req.body);
-
+    console.log("*req.body.myCheckbox: " + req.body.myCheckbox);
+    console.log("req.body.listCategory: " + req.body.listCategory);
     const userId = req.user.id;
     const delId = req.body.myCheckbox;
 
-    TodoUser.findOneAndUpdate({
-      userID: userId
-    }, {
-      $pull: {
-        lists: {
-          _id: delId
-        }
-      }
-    }, function(err, foundList) {
 
-      if (!err) {
-        res.redirect("/home");
-      }else{
-        console.log(err);
-      }
-      
-    });
+
+    if (typeof req.body.myCheckbox == "undefined") {
+      console.log("**********req.body.myCheckbox undefined");
+      console.log("****************************************");
+      console.log("Add code here to handle click on category");
+      console.log("****************************************");
+      console.log("****** req.body.listCategory: " + req.body.listCategory);
+      console.log("****** req.params: " + req.params);
+      const userListCategory = (req.body.listCategory).trim();
+      const redirectUserList = "/user/" + userListCategory;
+      console.log("redirectUserList:--" + redirectUserList + "---");
+
+      res.redirect(redirectUserList);
+
+      // res.render("list", {
+      //   currentYear: currentYear,
+      //   listTitle: "testListTitle",
+      //   newItems: []
+      // });
+
+    }else{
+        console.log("############req.body.myCheckbox DEFINED");
+        TodoUser.findOneAndUpdate({
+          userID: userId
+        }, {
+          $pull: {
+            lists: {
+              _id: delId
+            }
+          }
+        }, function(err, foundList) {
+
+          if (!err) {
+            res.redirect("/home");
+          }else{
+            console.log(err);
+          }
+
+        });
+    }
+
 
   }else{
     res.render("signin", {
