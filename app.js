@@ -66,21 +66,21 @@ const User = model("User", userSchema);
 
 
 const itemSchema = new Schema({
-  item: String
+  todoEntry: String
 });
 
 const Item = model("Item", itemSchema);
 
 const listSchema = new Schema({
-  listCategory: String
+  listCategory: String,
+  items: [itemSchema]
 });
 
 const List = model("List", listSchema);
 
 const todoUserSchema = new Schema({
   userID: String,
-  lists: [listSchema],
-  items: [itemSchema]
+  lists: [listSchema]
 }, {
   collection: 'todoUsers'
 });
@@ -150,6 +150,12 @@ app.get("/", function(req, res) {
   });
 });
 
+app.get("/register", function(req, res) {
+  res.render("register", {
+    currentYear: currentYear
+  });
+});
+
 app.get("/home", function(req, res) {
   console.log("In home route get method");
   console.log(req.isAuthenticated());
@@ -177,10 +183,10 @@ app.get("/home", function(req, res) {
       }
     });
   } else {
-    //res.redirect("login");
-    res.render("signin", {
-      currentYear: currentYear
-    });
+    res.redirect("/");
+    // res.render("signin", {
+    //   currentYear: currentYear
+    // });
   }
 });
 
@@ -188,17 +194,51 @@ app.get("/home", function(req, res) {
 app.get("/user/:userListCategory", function(req, res) {
 
   console.log("-------req.params.userListCategory: " + req.params.userListCategory);
+  const userListCategory = req.params.userListCategory;
+  if (req.isAuthenticated()) {
+    console.log("req.user.id: " + req.user.id);
+    const userId = req.user.id;
 
-  const testListTitle = req.params.userListCategory;
+    TodoUser.findOne({"userID": userId, "lists.listCategory": userListCategory}, function(err, userListFound) {
+      console.log("/user/:userListCategory: " + userListFound);
 
-  
+      if (!err){
+        const listArray = userListFound.lists;
+        listArray.forEach( list => {
 
-  res.render("list", {
-    currentYear: currentYear,
-    listTitle: testListTitle,
-    newItems: []
-  });
+          if (list.listCategory === userListCategory){
+            if (list.items[0] == ""){
 
+              res.render("list", {
+                currentYear: currentYear,
+                listTitle: userListCategory,
+                newItems: []
+              });
+
+            }else{
+
+              res.render("list", {
+                currentYear: currentYear,
+                listTitle: userListCategory,
+                newItems: list.items
+              });
+            }
+          }
+
+        });
+
+
+
+
+        //console.log("userListFound.lists.items:- " + userListFound.lists.items);
+        // console.log("userListCategoryItems:3 - "  +  userListCategoryItems);
+      }else{
+        console.log(err);
+      }
+    });
+  }else{
+    res.redirect("/");
+  }
   // var customListName = _.capitalize(req.params.customListName);
   // console.log(customListName);
   // List.findOne({
@@ -278,8 +318,7 @@ app.post("/signup", function(req, res) {
 
       const todoUser = new TodoUser({
         userID: user.id,
-        lists: [],
-        items: []
+        lists: []
       });
       todoUser.save();
 
@@ -293,10 +332,11 @@ app.post("/signup", function(req, res) {
 
 app.post("/registerpage",
   function(req, res) {
-    console.log("In register post call");
-    res.render("register", {
-      currentYear: currentYear
-    });
+    console.log("In register post call  --> redirect to get-register");
+    res.redirect("/register");
+    // res.render("register", {
+    //   currentYear: currentYear
+    // });
   });
 
 app.post('/signin',
@@ -308,6 +348,7 @@ app.post('/signin',
   app.post("/home", function(req, res) {
 
     console.log("In home route post method");
+    //res.redirect("/home");
     console.log(req.isAuthenticated());
 
     if (req.isAuthenticated()) {
@@ -318,7 +359,8 @@ app.post('/signin',
       const userId = req.user.id;
 
       const list = new List({
-        listCategory: req.body.getToDoCategory
+        listCategory: req.body.getToDoCategory,
+        items: []
       });
 
       TodoUser.findOne({"userID": userId, "lists.listCategory": list.listCategory}, function(err, userListFound) {
@@ -418,6 +460,79 @@ app.post("/userListCategory/exploreDelete", function(req, res) {
     });
   }
 });
+
+app.post("/user/:userListCategory/add", function(req, res) {
+
+  console.log("-------req.params.userListCategory: " + req.params.userListCategory);
+  //console.log("-------req.body:- " + req.body.getToDo);
+  const userListCategory = req.params.userListCategory;
+  if (req.isAuthenticated()) {
+    console.log("req.user.id: " + req.user.id);
+    const userId = req.user.id;
+
+    const item = new Item({
+      todoEntry: req.body.getToDo
+    });
+
+    TodoUser.findOne({"userID": userId, "lists.listCategory": userListCategory}, function(err, userListFound) {
+      console.log("/user/:userListCategory/add: " + userListFound);
+      if (!err){
+        // const Item = model("Item", itemSchema);
+        if (typeof userListFound.lists.items == "undefined"){
+
+          // const list = new List({
+          //   listCategory: userListCategory,
+          //   items: [item]
+          // });
+          //
+          // const todoUser = new TodoUser({
+          //   userID: userId,
+          //   lists: [list]
+          // });
+          console.log("item:-- " + item);
+          console.log("userListFound:-- " + userListFound);
+          // userListFound.lists.items = [item];
+          TodoUser.findOneAndUpdate({"userID": userId, "lists.listCategory": userListCategory}, {$push: {"lists.$.items": item}}, { 'new': true },
+           function(err, foundList) {
+
+            if (!err) {
+              res.redirect("/user/" + userListCategory);
+            }else{
+              console.log(err);
+            }
+
+          });
+          // console.log("userListFound after assignment:-- " + userListFound);
+          // userListFound.save();
+          // const todoUserSchema = new Schema({
+          //   userID: String,
+          //   lists: [listSchema]
+          // });
+
+          // res.render("list", {
+          //   currentYear: currentYear,
+          //   listTitle: userListCategory,
+          //   newItems: [item]
+          // });
+          // res.redirect("/user/" + userListCategory);
+        }else{
+
+          userListFound.lists.items.push(item);
+          userListFound.save();
+          res.redirect("/user/" + userListCategory);
+        }
+
+        //console.log("userListFound.lists.items:- " + userListFound.lists.items);
+        // console.log("userListCategoryItems:3 - "  +  userListCategoryItems);
+      }else{
+        console.log(err);
+      }
+    });
+  }else{
+    res.redirect("/");
+  }
+});
+
 
 app.post('/logout', function(req, res, next) {
   req.logout(function(err) {
