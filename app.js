@@ -7,6 +7,7 @@ const date = require(__dirname + "/date.js");
 const app = express();
 const _ = require("lodash");
 const mongoose = require("mongoose");
+// const bcrypt = require('bcrypt');
 //Authentication:
 const session = require("express-session");
 const passport = require("passport");
@@ -53,10 +54,23 @@ const userSchema = new Schema({
   password: String,
   googleId: String,
   facebookId: String,
+  // verifyPassword: function(password, done) {
+  //     bcrypt.compare(password, this.password, function(err, isMatch) {
+  //         if (err) return done(err);
+  //         done(null, isMatch);
+  //     });
+  // }
   // secret: String
 }, {
   collection: "users"
 });
+
+// userSchema.methods.verifyPassword = function(password, done) {
+//     bcrypt.compare(password, this.password, function(err, isMatch) {
+//         if (err) return done(err);
+//         done(null, isMatch);
+//     });
+// }
 
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
@@ -106,6 +120,36 @@ passport.deserializeUser(function(id, done) {
 });
 
 passport.use(new LocalStrategy(User.authenticate()));
+// passport.use(new LocalStrategy(
+//   {   usernameField : 'username',
+//       passwordField : 'password',
+//        },
+//        function (username, password, done) {
+//            User.findOne({ where: { email: username } })
+//                .then(function (users) {
+//                    if (!users) {
+//                        return done(null, false, { message: 'Incorrect email.' });
+//                    }
+//                    if (users.password !== password) {
+//                        return done(null, false, { message: 'Incorrect password.' });
+//                    }
+//                    return done(null, users);
+//                })
+//                .catch(err => done(err));
+//        }
+//    ));
+// passport.use(new LocalStrategy(
+//   function(username, password, done) {
+//     User.findOne({ username: username }, function (err, user) {
+//       if (err) { return done(err); }
+//       if (!user) { return done(null, false, {message: "username not found!"}); }
+//       if (!user.verifyPassword(password)) { return done(null, false, {message: "incorrect password"}); }
+//       return done(null, user);
+//     });
+//   }
+// ));
+
+
 
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
@@ -340,7 +384,7 @@ app.post("/registerpage",
   });
 
 app.post('/signin',
-  passport.authenticate('local', { failureRedirect: '/' }),
+  passport.authenticate('local', { failureRedirect: '/', failureMessage: true }),
   function(req, res) {
     res.redirect('/home');
   });
