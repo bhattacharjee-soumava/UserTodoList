@@ -534,6 +534,37 @@ app.post("/user/:userListCategory/add", function(req, res) {
 });
 
 
+app.post("/user/:userListCategory/delete", function(req, res) {
+
+  console.log("-------req.params.userListCategory: " + req.params.userListCategory);
+  //console.log("-------req.body:- " + req.body.getToDo);
+  const userListCategory = req.params.userListCategory;
+  if (req.isAuthenticated()) {
+    console.log("req.user.id: " + req.user.id);
+    const userId = req.user.id;
+
+    const item = new Item({
+      todoEntry: req.body.getToDo
+    });
+
+    const delId = req.body.myCheckbox;
+    console.log("#/user/:userListCategory/delete---req.body.myCheckbox ---- " + delId);
+    TodoUser.findOneAndUpdate({"userID": userId, "lists.listCategory": userListCategory}, {$pull: {"lists.$.items": {_id: delId}}}, { 'new': true },
+     function(err, foundList) {
+          // userListFound.lists.items = [item];
+          if (!err) {
+            res.redirect("/user/" + userListCategory);
+          }else{
+            console.log(err);
+          }
+
+          });
+
+    }else{
+          res.redirect("/");
+    }
+});
+
 app.post('/logout', function(req, res, next) {
   req.logout(function(err) {
     if (err) {
