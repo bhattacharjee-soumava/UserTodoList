@@ -1,3 +1,5 @@
-node_modules
+/node_modules
 public/css/rough.txt
-.env
+.DS_Store
+/*.env
+npm-debug.log

@@ -166,6 +166,14 @@ passport.use(new GoogleStrategy({
       googleId: profile.id
     }, function(err, user) {
       console.log('A new user from "%s" was inserted', user.googleId);
+      console.log("Local user: " + user + "is saved.");
+      console.log("UserId: " + user.id);
+
+      const todoUser = new TodoUser({
+        userID: user.id,
+        lists: []
+      });
+      todoUser.save();
       return cb(err, user);
     });
   }
@@ -180,6 +188,14 @@ passport.use(new FacebookStrategy({
     User.findOrCreate({
       facebookId: profile.id
     }, function(err, user) {
+      console.log("Local user: " + user + "is saved.");
+      console.log("UserId: " + user.id);
+
+      const todoUser = new TodoUser({
+        userID: user.id,
+        lists: []
+      });
+      todoUser.save();
       return cb(err, user);
     });
   }
@@ -318,7 +334,10 @@ app.get('/auth/google/home',
     failureRedirect: '/'
   }),
   function(req, res) {
-    // Successful authentication, redirect to secrets.
+
+
+
+    // Successful authentication, redirect to home.
     res.redirect('/home');
   });
 
@@ -628,5 +647,5 @@ if (port == null || port == "") {
 
 
 app.listen(port, function() {
-  console.log("Server started on port 3000");
+  console.log("Server started on port-" + port);
 });
