@@ -154,7 +154,8 @@ passport.use(new LocalStrategy(User.authenticate()));
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "http://localhost:3000/auth/google/home"
+    // callbackURL: "http://localhost:3000/auth/google/home"
+    callbackURL: "https://agile-meadow-02076.herokuapp.com/auth/google/home"
     // callbackURL: '/oauth2/redirect/google',
 
   },
@@ -182,7 +183,8 @@ passport.use(new GoogleStrategy({
 passport.use(new FacebookStrategy({
     clientID: process.env.FACEBOOK_APP_ID,
     clientSecret: process.env.FACEBOOK_APP_SECRET,
-    callbackURL: "http://localhost:3000/auth/facebook/home"
+    // callbackURL: "http://localhost:3000/auth/facebook/home"
+    callbackURL: "https://agile-meadow-02076.herokuapp.com/auth/facebookß/home"
   },
   function(accessToken, refreshToken, profile, cb) {
     User.findOrCreate({
